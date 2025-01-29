@@ -37,6 +37,7 @@ def samples2dm(samples):
         dm: tensor of shape (bs, n, d + 1)
     '''
     w = keras.ops.any(samples, axis=-1)
+    w = keras.ops.cast(w, 'float32')
     w = w / keras.ops.sum(w, axis=-1, keepdims=True)
     return comp2dm(w, samples)
 

@@ -1,5 +1,6 @@
 import keras
 import numpy as np
+from sklearn.metrics import pairwise_distances
 import tensorflow_probability as tfp
 
 
@@ -98,7 +99,12 @@ class KDMLayer(keras.layers.Layer):
                                        [b_size, self.n_comp, self.dim_x])
         out = keras.ops.concatenate((out_w, out_x), 2)
         return out
-    def init_components(self, samples_x):
+    
+    def init_components(self, samples_x, init_sigma=False, sigma_mult=1):
+        if init_sigma:
+            distances = pairwise_distances(samples_x)
+            sigma = np.mean(distances) * sigma_mult
+            self.kernel.sigma.assign(sigma)
         self.c_x.assign(samples_x)
         self.c_w.assign(keras.ops.ones((self.n_comp,)) / self.n_comp)
 

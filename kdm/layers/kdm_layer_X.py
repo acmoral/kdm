@@ -2,7 +2,7 @@ import keras
 import numpy as np
 from sklearn.metrics import pairwise_distances
 import tensorflow_probability as tfp
-
+import tensorflow as tf
 
 def l1_loss(vals):
     '''

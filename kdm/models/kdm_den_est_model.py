@@ -1,6 +1,7 @@
 import keras
 from ..layers import RBFKernelLayer, KDMProjLayer
 import numpy as np
+import tensorflow as tf
 from sklearn.metrics import pairwise_distances
 import tensorflow_probability as tfp
 

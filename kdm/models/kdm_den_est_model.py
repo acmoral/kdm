@@ -45,6 +45,6 @@ class KDMDenEstModel(keras.Model):
             components_distribution=tfp.distributions.Independent( 
                 tfp.distributions.Normal(
                     loc=self.kdmproj.c_x,  # component 2
-                    scale=tf.cast(self.kernel.sigma,tf.float32)*np.sqrt(2.)),
+                    scale=(tf.cast(self.kernel.sigma,tf.float32)**2)*2),
                     reinterpreted_batch_ndims=1))
         return gm

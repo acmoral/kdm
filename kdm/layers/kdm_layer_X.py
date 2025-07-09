@@ -130,7 +130,7 @@ class KDMLayer(keras.layers.Layer):
             components_distribution=tfp.distributions.Independent( 
                 tfp.distributions.Normal(
                     loc=self.c_x,  # component 2
-                    scale=(tf.cast(self.kernel.sigma,tf.float32)**2)*2),
+                    scale=kdm_den_est_model.kdmproj.kernel.sigma.numpy()*np.sqrt(2).astype(np.float32)),
                     reinterpreted_batch_ndims=1))
         return gm
 

@@ -2,6 +2,7 @@ import keras
 import numpy as np
 from sklearn.metrics import pairwise_distances
 import tensorflow_probability as tfp
+from sklearn.neighbors import NearestNeighbors
 import tensorflow as tf
 
 def l1_loss(vals):
@@ -113,11 +114,13 @@ class KDMLayer(keras.layers.Layer):
     
     def init_components(self, samples_x, init_sigma=False, sigma_mult=1):
         if init_sigma:
-            distances = pairwise_distances(samples_x)
-            sigma = np.mean(distances) * sigma_mult
+            nn_model = NearestNeighbors(n_neighbors=3)
+            nn_model.fit(samples_x)
+            distances, _ = nn_model.kneighbors(samples_x)
+            sigma = np.mean(distances[:, 2]) * sigma_mult
             self.kernel.sigma.assign(sigma)
-        self.c_x.assign(samples_x)
-        self.c_w.assign(keras.ops.ones((self.n_comp,)) / self.n_comp)
+        self.kdmproj.c_x.assign(samples_x)
+        self.kdmproj.c_w.assign(keras.ops.ones((self.n_comp,)) / self.n_comp)
 
     def get_config(self):
         config = {
@@ -141,7 +144,7 @@ class KDMLayer(keras.layers.Layer):
             components_distribution=tfp.distributions.Independent( 
                 tfp.distributions.Normal(
                     loc=self.c_x,  # component 2
-                    scale=kdm_den_est_model.kdmproj.kernel.sigma.numpy()*np.sqrt(2).astype(np.float32)),
+                    scale=kdm_den_est_model.kdmproj.kernel.sigma.numpy()/np.sqrt(2).astype(np.float32)),
                     reinterpreted_batch_ndims=1))
         return gm
 

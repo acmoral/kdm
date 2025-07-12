@@ -52,6 +52,7 @@ class KDMLayer(keras.layers.Layer):
             n_comp: int = 0, 
             l1_x: float = 0.,
             l1_act: float = 0.,
+            generative: float = 0.,              
             **kwargs
     ):
         super().__init__(**kwargs)
@@ -62,6 +63,7 @@ class KDMLayer(keras.layers.Layer):
         self.n_comp = n_comp
         self.l1_x = l1_x
         self.l1_act = l1_act
+        self.generative = generative
         self.c_x = self.add_weight(
             shape=(self.n_comp, self.dim_x),
             #initializer=keras.initializers.orthogonal(),
@@ -79,17 +81,25 @@ class KDMLayer(keras.layers.Layer):
         # Weight regularizers
         if self.l1_x != 0:
             self.add_loss(self.l1_x * l1_loss(self.c_x))
-            self.add_loss(self.l1_y * l1_loss(self.c_y))
-        comp_w = keras.ops.abs(self.c_w) + self.eps
+            
+        comp_w = keras.ops.abs(self.c_w)
         # normalize comp_w to sum to 1
-        comp_w = comp_w / keras.ops.sum(comp_w)
+        comp_w_sum = keras.ops.clip(keras.ops.sum(comp_w), 
+                                    self.eps, np.inf)
+        # comp_w = comp_w / comp_w_sum
+        self.c_w.assign(comp_w / comp_w_sum)
         in_w = inputs[:, :, 0]  # shape (b, n_comp_in)
         in_v = inputs[:, :, 1:] # shape (b, n_comp_in, dim_x)
         out_vw = self.kernel(in_v, self.c_x)  # shape (b, n_comp_in, n_comp)
-        out_w = comp_w[np.newaxis, np.newaxis, :] * keras.ops.square(out_vw)
+        out_w = self.c_w[np.newaxis, np.newaxis, :] * keras.ops.square(out_vw)
+        if self.generative != 0:
+            proj = keras.ops.einsum('...i,...ij->...', in_w, out_w) # shape (b, n_comp)
+            log_probs = (keras.ops.log(proj + self.eps)
+                     + self.kernel.log_weight())
+            self.add_loss(-self.generative * keras.ops.mean(log_probs)) 
         out_w = keras.ops.maximum(out_w, self.eps) 
         out_w_sum = keras.ops.sum(out_w, axis=2, keepdims=True) # shape (b, n_comp_in, 1)
-        out_w = out_w / out_w_sum
+        out_w = out_w / out_w_sum # shape (b, n_comp_in, n_comp)
         out_w = keras.ops.einsum('...i,...ij->...j', in_w, out_w) # shape (b, n_comp)
         if self.l1_act != 0:
             self.add_loss(self.l1_act * l1_loss(out_w))
@@ -99,6 +109,7 @@ class KDMLayer(keras.layers.Layer):
                                        [b_size, self.n_comp, self.dim_x])
         out = keras.ops.concatenate((out_w, out_x), 2)
         return out
+
     
     def init_components(self, samples_x, init_sigma=False, sigma_mult=1):
         if init_sigma:

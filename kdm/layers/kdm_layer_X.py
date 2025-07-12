@@ -119,8 +119,8 @@ class KDMLayer(keras.layers.Layer):
             distances, _ = nn_model.kneighbors(samples_x)
             sigma = np.mean(distances[:, 2]) * sigma_mult
             self.kernel.sigma.assign(sigma)
-        self.kdmproj.c_x.assign(samples_x)
-        self.kdmproj.c_w.assign(keras.ops.ones((self.n_comp,)) / self.n_comp)
+        self.c_x.assign(samples_x)
+        self.c_w.assign(keras.ops.ones((self.n_comp,)) / self.n_comp)
 
     def get_config(self):
         config = {
